@@ -30,8 +30,13 @@ const trackList: Track[] = [
 		blurb:
 			'The privacy model behind Minister: what gets disclosed, how little of it, and why one user stays uncorrelatable across the apps that rely on it.',
 		pages: [
+			page('understand', 'what-is-minister', 'What Is Minister', 1),
+			page('understand', 'ecosystem-and-relying-parties', 'The Ecosystem and Relying Parties', 2),
+			page('understand', 'badges-and-verifiable-credentials', 'Badges and Verifiable Credentials', 3),
+			page('understand', 'signing-keys-and-did', 'Signing Keys and the DID', 4),
 			page('understand', 'selective-disclosure-and-anonymity', 'Selective Disclosure and Anonymity', 5),
-			page('understand', 'pairwise-subjects-and-unlinkability', 'Pairwise Subjects and Unlinkability', 6)
+			page('understand', 'pairwise-subjects-and-unlinkability', 'Pairwise Subjects and Unlinkability', 6),
+			page('understand', 'trust-and-security-model', 'Trust and Security Model', 7)
 		]
 	},
 	{
@@ -40,6 +45,8 @@ const trackList: Track[] = [
 		blurb:
 			'Wire a relying party to Minister with @ministryofmany/client: run the flow yourself, verify tokens and badges on a backend, or drop it into Auth.js.',
 		pages: [
+			page('build', 'getting-started', 'Getting Started', 1),
+			page('build', 'registering-an-oidc-client', 'Registering an OIDC Client', 2),
 			page('build', 'auth-code-pkce-flow', 'The Auth-Code + PKCE Flow', 3),
 			page('build', 'verifying-tokens-and-badges', 'Verifying Tokens and Badges on a Backend', 4),
 			page('build', 'auth-js-integration', 'Auth.js Integration', 5),
