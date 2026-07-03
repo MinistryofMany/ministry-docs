@@ -153,7 +153,7 @@ credentialTypes `MinisterResidencyCountryCredential`, `MinisterResidencyStateCre
 
 ## Account-derived types (provider side only)
 
-Minister's `github` plugin can issue three more types that attest facts about a connected
+Minister's `github` plugin can issue two more types that attest facts about a connected
 OAuth account without leaking the underlying values. They are **coarse buckets, never exact
 figures** - the plugin picks the highest bucket the account satisfies, so disclosure
 reveals only a lower bound.
@@ -161,17 +161,15 @@ reveals only a lower bound.
 ```ts
 // account-age  - "older than N months", never the creation date
 { provider: "github" | "google" | "discord"; olderThanMonths: 12 | 24 | 36 | 60 }
-// two-factor   - bare presence; the badge's existence IS the claim
-{ provider: "github" | "google" | "discord" }
 // social-following - "at least N followers", never the exact count
 { provider: "github" | "google" | "discord"; followersAtLeast: 10 | 50 | 100 | 500 | 1000 }
 ```
 
-All three schemas are `.strict()`.
+Both schemas are `.strict()`.
 
 **These are NOT in the SDK's `/badges` copy yet.** In today's SDK:
 
-- `knownBadgeTypes()` does not list `account-age`, `two-factor`, or `social-following`.
+- `knownBadgeTypes()` does not list `account-age` or `social-following`.
 - `getBadgeClaimSchema("account-age")` returns `undefined`.
 - `badgeTypeOf([...])` returns `undefined` for their VC `credentialType`, so a verifier
   using the SDK vocabulary treats such a badge as an unknown type.
@@ -249,7 +247,7 @@ Minister type. The Minister type is `Minister<PascalCaseSlug>Credential`:
 | `residency-city`    | `MinisterResidencyCityCredential`     | `badge:residency-city`   |
 | `age-over-N`        | `MinisterAgeOver${N}Credential`       | `badge:age-over-N`       |
 
-The account-derived types (`account-age`, `two-factor`, `social-following`) have no
+The account-derived types (`account-age`, `social-following`) have no
 SDK entry, so their credentialType strings are not part of the SDK vocabulary today.
 
 ## Drift: keep the two copies in sync
@@ -258,7 +256,7 @@ The `/badges` vocabulary is a **hand-maintained copy** of `@minister/shared`, no
 import - deliberately, so the SDK publishes standalone with no dependency on Minister's
 internal packages. That means it can drift, and today it does:
 
-- The account-derived types (`account-age`, `two-factor`, `social-following`) exist in
+- The account-derived types (`account-age`, `social-following`) exist in
   `@minister/shared` but not in the SDK.
 - Any future slug, provider enum change, or schema tweak in `@minister/shared` must be
   mirrored into `minister-client/src/badges/` by hand.
