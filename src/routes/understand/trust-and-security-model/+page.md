@@ -128,5 +128,8 @@ is wrongly accepted), but it fails silently. If you see login succeed and every
 badge rejected, check that those two hosts match (a non-default port is
 percent-encoded as `host%3Aport`).
 
-> TODO: expand with a threat-model table (asset, adversary, control) and a note
-> on key rotation once a rotation runbook is published.
+For the algorithm-level treatment - every primitive with its parameters and bit
+strength, an assets/adversaries/controls table, and the register of known gaps
+and why each is accepted - see the
+[Cryptography and security](/crypto/overview) track, and in particular
+[Threat Model and Known Gaps](/crypto/threat-model).

@@ -11,7 +11,7 @@ export interface DocPage {
 
 export interface Track {
 	/** Route + frontmatter track id. */
-	id: 'understand' | 'build';
+	id: 'understand' | 'build' | 'crypto';
 	/** Sidebar section heading. */
 	label: string;
 	/** One-line summary used on the landing page. */
@@ -52,6 +52,26 @@ const trackList: Track[] = [
 			page('build', 'auth-js-integration', 'Auth.js Integration', 5),
 			page('build', 'requesting-badges-and-policies', 'Requesting Badge Scopes and Policies', 6),
 			page('build', 'badge-type-reference', 'Badge-Type Reference', 7)
+		]
+	},
+	{
+		id: 'crypto',
+		label: 'Cryptography and security',
+		blurb:
+			'The algorithm-level reference for the whole ecosystem: every primitive with its name, parameters, and bit strength, how the pieces fit together, and the threat model. Written to be audited.',
+		pages: [
+			page('crypto', 'overview', 'Cryptographic Overview', 1),
+			page('crypto', 'glossary', 'Glossary and Notation', 2),
+			page('crypto', 'hashing-hmac-and-kdfs', 'Hashing, HMAC, and Key Derivation', 3),
+			page('crypto', 'signatures-and-signing-keys', 'Signatures, Keys, and the DID', 4),
+			page('crypto', 'pairwise-subjects', 'Pairwise Subjects', 5),
+			page('crypto', 'verifiable-credentials', 'Verifiable Credentials and Holder Binding', 6),
+			page('crypto', 'badge-nullifier', 'The Badge Nullifier', 7),
+			page('crypto', 'signet-service', 'Signet: The Crypto-Core Service', 8),
+			page('crypto', 'oidc-flow-hardening', 'OIDC Flow Hardening and Disclosure', 9),
+			page('crypto', 'recovery-and-merge', 'Recovery, Assurance, and Account Merge', 10),
+			page('crypto', 'relying-party-zero-knowledge', 'Zero-Knowledge in the Relying Parties', 11),
+			page('crypto', 'threat-model', 'Threat Model and Known Gaps', 12)
 		]
 	}
 ];

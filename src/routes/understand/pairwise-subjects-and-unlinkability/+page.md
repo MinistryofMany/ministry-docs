@@ -23,21 +23,30 @@ The `sub` claim in an id_token is a pairwise pseudonymous identifier, per
 OIDC Core 1.0 §8.1. It is a keyed hash of the user and the client, so it is
 stable for a given `(user, client)` pair but differs across clients.
 
-From `apps/minister/src/lib/oidc-tokens.ts`:
+From `apps/minister/src/lib/pairwise-backend.ts`:
 
 ```ts
-export function pairwiseSub(userId: string, clientId: string): string {
-  const secret = process.env.OIDC_PAIRWISE_SECRET ?? process.env.AUTH_SECRET;
+function pairwiseSecret(): string {
+  const secret = process.env.OIDC_PAIRWISE_SECRET;
   if (!secret) {
-    throw new Error("OIDC_PAIRWISE_SECRET (or AUTH_SECRET fallback) must be set");
+    throw new Error("OIDC_PAIRWISE_SECRET must be set");
   }
-  const mac = createHmac("sha256", secret).update(`${userId}:${clientId}`).digest();
-  return mac.toString("base64url");
+  return secret;
+}
+
+export function deriveLocalPairwise(input: string): string {
+  return createHmac("sha256", pairwiseSecret()).update(input).digest("base64url");
 }
 ```
 
-So `sub = base64url(HMAC-SHA256(secret, userId + ":" + clientId))`, keyed by
-`OIDC_PAIRWISE_SECRET` (falling back to `AUTH_SECRET`). Properties that matter:
+So `sub = base64url(HMAC-SHA256(OIDC_PAIRWISE_SECRET, userId + ":" + clientId))`,
+where the `sub` family's input is `${userId}:${clientId}`. The key is
+`OIDC_PAIRWISE_SECRET`, environment-required with no fallback. An earlier version
+fell back to `AUTH_SECRET` when the pairwise secret was unset; that was removed so a
+missing secret is a hard boot failure, not a silent re-key of every pairwise value.
+For the exact HMAC construction, the four tagged input families, and the Signet
+oracle seam, see [Pairwise Subjects](/crypto/pairwise-subjects). Properties that
+matter:
 
 - Two RPs with different `clientId` values get different `sub` for the same user.
   They cannot join on it.
