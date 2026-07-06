@@ -10,13 +10,17 @@ Every construction described elsewhere in this track - the pairwise subject, the
 badge nullifier, seed sealing in Signet, the client-side identity vaults in
 FreedInk and Discreetly - bottoms out in one of seven symmetric primitives: two
 hash functions, one keyed hash, one key-derivation function used with two
-different hashes, two password KDFs, and one AEAD cipher. This page names each
-one precisely so the rest of the track can just say "HKDF-SHA-512, see here for
-params" instead of re-deriving it.
+different hashes, two password KDFs, and one AEAD cipher. We name each one
+precisely here so the rest of the track can just say "HKDF-SHA-512, see here
+for params" instead of re-deriving it every time.
 
 ## SHA-256 and SHA-512
 
-Both are FIPS 180-4 hash functions. SHA-256 produces a 256-bit digest with
+A hash function takes an input of any size and produces a fixed-size
+fingerprint: the same input always gives the same output, a different input
+gives a (practically certain) different output, and there's no running it
+backwards to recover the input from the fingerprint alone. Both SHA-256 and
+SHA-512 are FIPS 180-4 hash functions. SHA-256 produces a 256-bit digest with
 ~128-bit collision resistance (half the digest width, by the birthday bound);
 SHA-512 produces a 512-bit digest with ~256-bit collision resistance. Neither is
 used bare as often as you'd think - almost every appearance below is inside HMAC
@@ -41,7 +45,10 @@ width: a 32-byte value has SHA-256 underneath, a 64-byte value has SHA-512.
 
 ## HMAC-SHA-256
 
-FIPS 198-1 keyed hash: `HMAC-SHA-256(k, m)`. Output is 32 bytes, which shows up
+HMAC is a keyed fingerprint: feed it the same message and the same secret key
+and you always get the same short output back, but without the key you can't
+predict that output or forge one that will pass. FIPS 198-1 defines it as
+`HMAC-SHA-256(k, m)`. Output is 32 bytes, which shows up
 encoded as a 43-character base64url string (RFC 4648 §5, no padding) in every
 construction that surfaces it externally. As a keyed PRF its security is the
 full ~256-bit key space, distinct from - and not weakened by - SHA-256's
@@ -62,7 +69,11 @@ second roots session and ticket signing. Neither falls back to the other.
 
 ## HKDF: one RFC, two hashes
 
-RFC 5869 extract-then-expand key derivation, `HKDF(ikm, salt, info, L)`. Two
+HKDF takes one secret and stretches it into several output keys that are
+cryptographically independent of each other, each one tied to a different
+purpose string (`info`) so a key derived for one job can never be confused
+with, or substituted for, a key derived for another. RFC 5869 defines it as
+extract-then-expand key derivation, `HKDF(ikm, salt, info, L)`. Two
 independent uses in the system, deliberately on different hashes:
 
 **HKDF-SHA-256**, Minister-side, derives the interim nullifier key from the
@@ -99,7 +110,10 @@ constructions these keys feed into.
 
 ## Argon2id
 
-RFC 9106 memory-hard password hash, via `@node-rs/argon2`. Same OWASP-baseline
+Argon2id is a password hash deliberately built to be slow and memory-hungry,
+so that guessing candidate passwords against a stolen hash stays expensive
+even on custom hardware built to hash fast. It's standardized as RFC 9106,
+implemented here via `@node-rs/argon2`, with the same OWASP-baseline
 parameters everywhere it's used: `memoryCost = 19 * 1024` KiB (19 MiB),
 `timeCost = 2`, `parallelism = 1`. Its security property is memory-hardness
 (making GPU/ASIC parallelism expensive), not a fixed bit number the way a hash
@@ -116,9 +130,12 @@ Two call sites share these exact parameters:
 
 ## PBKDF2-HMAC-SHA-256
 
-RFC 8018 password-based KDF, built entirely on WebCrypto (`crypto.subtle`) in
-the two relying-party apps that keep a client-side identity secret. Same
-primitive, different iteration counts:
+PBKDF2 is the older way to turn a password into a key: run HMAC over the
+password many thousands of times in a row, so an attacker brute-forcing
+passwords has to pay that same cost per guess. RFC 8018 defines it as a
+password-based KDF; both apps that keep a client-side identity secret build
+it entirely on WebCrypto (`crypto.subtle`). Same primitive, different
+iteration counts:
 
 | App | File | Iterations | Feeds |
 | --- | --- | --- | --- |
@@ -138,8 +155,11 @@ caching, and FreedInk's separate BIP-39 mnemonic backup).
 
 ## AES-256-GCM
 
-NIST SP 800-38D AEAD, used in Signet to seal every long-lived secret at rest
-under a single KEK (`SIGNET_KEK`):
+AES-256-GCM both encrypts data and stamps it with a tag proving nobody
+tampered with it: decryption fails outright the moment either the ciphertext
+or the tag has been altered, so there's no such thing as a silently-corrupted
+decrypt. It's a NIST SP 800-38D AEAD, used in Signet to seal every long-lived
+secret at rest under a single KEK (`SIGNET_KEK`):
 
 - Key: 256-bit KEK.
 - Nonce: 96 bits (12 bytes), freshly random per seal.

@@ -8,10 +8,10 @@ order: 1
 
 The [Understand](/understand/what-is-minister) track explains the privacy model:
 pairwise identity, selective disclosure, why a relying party (RP) never sees
-your real identity twice. This track is the algorithm-level companion. It
-names the primitive, the standard it implements, its parameters, its bit
-strength, and what it does and does not guarantee, so you can audit the
-constructions instead of trusting a description of them.
+your real identity twice. This track is the algorithm-level companion. For
+every one of those claims, we name the primitive, the standard it implements,
+its parameters, its bit strength, and what it does and does not guarantee - so
+you can check our work instead of taking our word for it.
 
 Three systems carry the crypto: **Minister** (the OIDC identity provider and
 badge issuer), **Signet** (a separate Rust trust boundary that holds the
@@ -71,7 +71,9 @@ mixing them up is the single most common mistake in reading this codebase.
 
 Plus a fourth key that isn't a Minister-held secret at all: the **KMS badge
 key** (`#key-2`), non-extractable inside AWS KMS under alias
-`alias/minister-issuer`. It signs badge VCs and nothing else.
+`alias/minister-issuer`. It signs badge VCs and nothing else, and it never
+touches an id_token. A leaked token key cannot forge a badge. That is the
+whole point of keeping the two apart.
 
 ## The three key origins (Signet)
 
@@ -128,7 +130,8 @@ A user clicks "sign in with Minister" on FreedInk or Discreetly.
 4. Minister mints an `id_token` (600 s TTL) and an access token (RFC 9068
    `at+jwt`, 3600 s TTL), both signed EdDSA with `#key-3`. The `sub` claim is
    not the user's real id - it's a **pairwise subject**, an HMAC-SHA-256 of
-   `userId:clientId` keyed by `OIDC_PAIRWISE_SECRET`, unique per RP. See
+   `userId:clientId` keyed by `OIDC_PAIRWISE_SECRET`, unique per RP, so no two
+   RPs can compare notes and realize they're looking at the same person. See
    [Pairwise Subjects](/crypto/pairwise-subjects).
 5. The RP verifies the `id_token` against Minister's JWKS, selecting `#key-3`
    by `kid`. See [Signatures, Keys, and the DID](/crypto/signatures-and-signing-keys).

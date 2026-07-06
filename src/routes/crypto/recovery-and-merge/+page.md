@@ -7,10 +7,12 @@ order: 10
 ## What this page covers
 
 Losing every credential, and merging two accounts into one, are both
-identity-lifecycle events with real cryptographic weight behind them: a
-donor-proof JWT, Argon2id-hashed recovery codes, a weighted live re-proof
-threshold. This page walks the constructions and states the one known gap
-that matters most for anyone deciding whether to trust this today.
+identity-lifecycle events we treat with real cryptographic weight: a
+donor-proof JWT, Argon2id-hashed recovery codes (Argon2id is a slow,
+memory-hard hash, so a stolen hash file doesn't hand an attacker a fast way
+back to the original code), and a weighted live re-proof threshold. This
+page walks the constructions and states the one known gap that matters most
+for anyone deciding whether to trust this today.
 
 Read this alongside
 [Pairwise Subjects](/crypto/pairwise-subjects) for how `SubjectOverride`
@@ -197,9 +199,10 @@ const TYP = "minister-donor-proof";
 const TTL_SECONDS = 5 * 60; // 5 minutes
 ```
 
-The donor-proof ticket is an HS256 JWT (HMAC-SHA-256, RFC 7519) signed over
-`AUTH_SECRET` - not `OIDC_PAIRWISE_SECRET`, a different secret entirely (see
-below). It carries `{ donorUserId, jti }` with a 5-minute TTL and a 24-byte
+The donor-proof ticket is an HS256 JWT - HMAC-SHA-256, RFC 7519, a keyed
+fingerprint that anyone holding the same secret can check but nobody else can
+forge - signed over `AUTH_SECRET`, not `OIDC_PAIRWISE_SECRET`, a different
+secret entirely (see below). It carries `{ donorUserId, jti }` with a 5-minute TTL and a 24-byte
 random `jti`. Binding `donorUserId` into the signed payload, not just
 returning a bare "someone proved a donor" boolean, means a ticket minted for
 one donor account can never be redirected to merge a different account in.

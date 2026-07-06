@@ -13,11 +13,14 @@ in a table and checking for a duplicate) means Minister holds a plaintext, query
 list of every user's GitHub id or email address forever. That is exactly the
 correlatable, single-database blast radius the rest of this track works to avoid.
 
-The badge nullifier solves it without ever storing the anchor. It is a **gating-only**
-construction: it decides whether to *issue* a badge, and it is not the same thing as
-the Poseidon/BN254 nullifiers Semaphore and RLN use inside a zero-knowledge circuit
-(see [Zero-Knowledge in the Relying Parties](/crypto/relying-party-zero-knowledge)).
-This one runs entirely server-side, in two stages with different trust properties:
+The badge nullifier solves it without ever storing the anchor - and without Signet
+ever seeing it either. The goal in one sentence: one human should get one badge of
+a kind, and neither Minister nor Signet should learn the raw thing that makes them
+unique. It is a **gating-only** construction: it decides whether to *issue* a badge,
+and it is not the same thing as the Poseidon/BN254 nullifiers Semaphore and RLN use
+inside a zero-knowledge circuit (see
+[Zero-Knowledge in the Relying Parties](/crypto/relying-party-zero-knowledge)). We
+run it entirely server-side, in two stages with different trust properties:
 
 | Stage | Primitive | Output | What Minister learns | What Signet learns |
 | --- | --- | --- | --- | --- |
@@ -30,13 +33,20 @@ such that it can never be linked to the value another RP sees for the same badge
 
 ## Stage 1: dedup, blinded
 
+A VOPRF (verifiable oblivious PRF) lets Signet compute a keyed function over
+Minister's blinded input without ever seeing that input in the clear, and hand back
+a proof that it used its own real, pinned key and not some other one. That is the
+whole trick this stage leans on.
+
 **Primitive.** VOPRF, verifiable mode `0x01`, ciphersuite `ristretto255-SHA512`
 (RFC 9497). Signet's Rust `voprf` crate (`=0.5.0`, curve25519-dalek backend) implements
 it; RFC 9497 Appendix A.1.2 test vectors are asserted in-repo, and an interop harness
 cross-checks the TypeScript `@cloudflare/voprf-ts` implementation.
 
 **Sizes.** Group elements (the blinded element, the evaluation element, `pkS`) are
-32 bytes. The DLEQ proof is 64 bytes - two 32-byte scalars, `c` and `s`. The finalized
+32 bytes. The DLEQ proof - a compact proof that the same secret key produced this
+evaluation as produced the public key `pkS`, without revealing that key - is 64
+bytes: two 32-byte scalars, `c` and `s`. The finalized
 output `N_dedup` is 64 bytes (a SHA-512 Finalize output). Security is roughly
 **128-bit**: ristretto255 is a prime-order group of order close to `2^252`, with no
 cofactor or invalid-point classes to reject - the stated reason the build plan chose
@@ -65,7 +75,9 @@ The dedup input (`Signet/src/prf.rs:92-108`, built as `dedup_input`):
 input = LP("minister/null/v1") || LP("dedup") || LP(sybil_id) || LP(badge_type)
 ```
 
-**The protocol.**
+**The protocol.** Picture Minister sealing the anchor inside an envelope with a
+frosted window before handing it to Signet: Signet can stamp that envelope with its
+own private stamp, but it never gets to read what's inside.
 
 1. Minister builds `input` and **blinds it client-side** before sending anything.
    Signet never sees the anchor - only the blinded group element crosses the wire.
@@ -84,9 +96,10 @@ input = LP("minister/null/v1") || LP("dedup") || LP(sybil_id) || LP(badge_type)
    the outcome.
 
 Determinism is the whole trick: the same `(skS, input)` pair always finalizes to the
-same `N_dedup`, regardless of which random blind was used to hide it in transit. That
-lets Signet compare finalized outputs by plain byte equality without ever having
-learned the anchor that produced them.
+same `N_dedup`, regardless of which random blind was used to hide it in transit - the
+envelope's frosting can be different every time and the stamp underneath still comes
+out identical. That lets Signet compare finalized outputs by plain byte equality
+without ever having learned the anchor that produced them.
 
 **The ledger.** `dedup_entries(entry_ref BLOB PK, value BLOB UNIQUE, owner_tag,
 badge_type, created_at)` (`Signet/src/db.rs:195-201`). `value` is the 64-byte
@@ -122,10 +135,15 @@ N_dedup(gh:1234567, oauth-account) = bf13858616d5...bb2a21   (64 bytes)
 
 ## Stage 2: per-RP disclose
 
+HMAC is a keyed fingerprint: the same input under the same secret key always
+produces the same short output, but you cannot run it backwards to recover the key,
+and you cannot produce a valid output at all without holding it.
+
 **Primitive.** HMAC-SHA-256 (RFC 2104 / FIPS 198-1), computed **inside Signet, over
-the already-stored `N_dedup`** - not blinded, not proof-carrying. That is deliberate:
-the input to this stage is already the output of a verified PRF, so a proof here
-would only recreate an equality oracle that Minister's own database would then hold.
+the already-stored `N_dedup`** - not blinded, not proof-carrying. Why not another
+blinded, proof-carrying VOPRF call here, the way stage 1 uses one? Because the input
+to this stage is already the output of a verified PRF, so a proof here would only
+recreate an equality oracle that Minister's own database would then hold.
 
 **Formula** (`Signet/src/prf.rs:12-13, 198-224`):
 

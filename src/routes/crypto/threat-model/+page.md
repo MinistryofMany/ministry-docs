@@ -29,8 +29,8 @@ users, read the gap register before you read anything else in this track.
 
 ## Key rotation - the honest state
 
-There is no published rotation runbook for this ecosystem yet. What can be
-said accurately from the code:
+There is no published rotation runbook for this ecosystem yet. Here's what we
+can say accurately, straight from the code:
 
 - **`#key-2` (the KMS badge key).** Boot pins the KMS-derived public key
   against a hardcoded `ISSUER_KMS_PUBLIC_JWK` and refuses to start on a
@@ -61,8 +61,8 @@ said accurately from the code:
 The individual postures are documented - the never-rotate seed is an explicit
 ADR decision, covered on
 [Signet: The Crypto-Core Service](/crypto/signet-service) - but the absence
-of any rotation runbook is not recorded as a gap anywhere else, so it's
-stated here directly: rotation is possible for some keys and effectively a
+of any rotation runbook is not recorded as a gap anywhere else, so let's say
+it plainly here: rotation is possible for some keys and effectively a
 one-way door for others, and there is no written runbook for any of it yet.
 
 ## The accepted-gaps register
@@ -74,7 +74,8 @@ them here in one place is the point of this page.
 
 ### H-1: the credential-quarantine cooldown is written but never enforced
 
-**Severity: high.** Minister sets a `quarantinedUntil` field on a freshly
+**Severity: high.** We built the quarantine window; we never wired it up.
+Minister sets a `quarantinedUntil` field on a freshly
 added credential (for example, a passkey just grafted onto an account) and
 displays it in the UI, but no production code path actually reads that field
 before allowing a privileged action. A session that just reached AAL2 via a
@@ -99,8 +100,8 @@ in the same environment. A database-plus-key leak lets an attacker hash
 candidate anchors (guessed emails, known OAuth account ids) and match them
 against stored values, recovering exactly the real-world identifiers the
 nullifier was supposed to keep opaque. This is accepted only under a hard,
-code-enforced `users == 0` deploy gate, and it's the entire reason dedup was
-moved into Signet's blinded VOPRF in the first place - Signet never sees the
+code-enforced `users == 0` deploy gate, and it's exactly why we moved dedup
+into Signet's blinded VOPRF in the first place - Signet never sees the
 anchor, only a blinded group element, so the same leak against Signet
 recovers nothing. If you're checking whether this gap applies to a live
 deployment, confirm which backend is actually selected; the construction
@@ -109,9 +110,10 @@ rather than asserting one. See [The Badge Nullifier](/crypto/badge-nullifier).
 
 ### Stage-2 disclosure has no DLEQ - Minister just trusts Signet
 
-**Severity: medium.** Stage-1 dedup carries a DLEQ proof that Minister
-verifies against a pinned public key, so Signet can't quietly swap in a
-different key mid-protocol. Stage-2, the per-RP disclosed nullifier, is a
+**Severity: medium.** Stage-1 dedup carries a DLEQ proof - discrete-log
+equality, a proof that the same secret key was used to produce two different
+values, without revealing the key - that Minister verifies against a pinned
+public key, so Signet can't quietly swap in a different key mid-protocol. Stage-2, the per-RP disclosed nullifier, is a
 plain HMAC computed inside Signet with no accompanying proof - deliberately,
 since a proof over an already-derived PRF output would recreate the same
 equality-oracle risk the VOPRF design was meant to avoid. The consequence:

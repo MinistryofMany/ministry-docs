@@ -6,7 +6,10 @@ order: 4
 
 ## Ed25519 as a primitive
 
-Ed25519 is the EdDSA signature scheme from RFC 8032, instantiated over
+In plain terms, a signature scheme lets a key holder stamp a message so
+anyone with the matching public key can confirm it came from that key and
+wasn't altered in transit, without the verifier ever touching the private
+key. Ed25519 is the EdDSA signature scheme from RFC 8032, instantiated over
 Curve25519. A key pair is a 32-byte public key and a 32-byte seed (private
 key); a signature is always exactly 64 bytes. Security is ~128-bit. In JOSE
 contexts (JWS, JWKS, DID documents) it's registered as `alg: "EdDSA"` per RFC
@@ -33,8 +36,9 @@ cryptographic in the signature scheme.
 
 ## Two keys, two trust mechanisms
 
-Minister signs two different kinds of Ed25519 artifact under two different
-keys, described conceptually in
+Why two keys, and not one? Because badges and tokens have different threat
+profiles. We sign two different kinds of Ed25519 artifact under two
+different keys, described conceptually in
 [Signing Keys and the DID](/understand/signing-keys-and-did). This page goes
 one level deeper, into how each key is actually invoked.
 
@@ -56,10 +60,10 @@ Production badge signing goes through AWS KMS, never a local private key:
   forced the second key to exist.
 - A boot-time trust anchor: at startup, Minister calls KMS `GetPublicKey`,
   derives the public key, and compares it against a pinned expected value
-  (`ISSUER_KMS_PUBLIC_JWK`). A mismatch refuses to boot. This catches
-  configuration drift - an alias silently repointed to a different KMS key -
-  before it can produce badges signed under a key nobody has pinned or
-  published.
+  (`ISSUER_KMS_PUBLIC_JWK`). A mismatch refuses to boot (it fails closed,
+  which is the behavior you want here). This catches configuration drift -
+  an alias silently repointed to a different KMS key - before it can produce
+  badges signed under a key nobody has pinned or published.
 - No local fallback exists on the KMS path. Dev/local environments use an
   entirely separate code path: a raw `ISSUER_PRIVATE_JWK` or a persisted dev
   key, never a degraded mode of the production signer.
@@ -73,6 +77,12 @@ and persists a local key instead - and signing is a local
 boot pin check. This is the key that has to handle large signing inputs,
 because an id_token can embed several full badge VCs in its
 `minister_badges` array.
+
+That's the trade the split buys: `#key-2` is slow, hardware-backed, and
+guarded by a boot-time pin check because it mints something long-lived and
+high-trust; `#key-3` is fast and local because it has to sign on every
+token mint. A leaked `#key-3` can forge tokens, but it cannot forge a badge -
+and that is the whole point of not sharing a key across the two jobs.
 
 ## JWKS serves both, the DID document serves one
 
@@ -89,10 +99,10 @@ This is the crypto-level version of the property named in
 signed with `#key-3` does not verify against a verifier that pins to
 `assertionMethod`.
 
-Worth being precise about *why*, since it's easy to mis-locate the guarantee.
-Ed25519 signature verification itself cannot express "only sign artifact type
-X with this key" - a signature is either valid for a given (key, message) pair
-or it isn't, full stop. If someone signed a badge-shaped JWT-VC payload with
+Why does that rejection actually happen? The guarantee is easy to mis-locate,
+so be precise about where it lives. Ed25519 signature verification itself
+cannot express "only sign artifact type X with this key" - a signature is
+either valid for a given (key, message) pair or it isn't, full stop. If someone signed a badge-shaped JWT-VC payload with
 `#key-3` instead of `#key-2`, the signature would be perfectly valid Ed25519 -
 `#key-3`'s public key is real, published, and would verify it correctly. The
 property that a badge verifier "rejects" it holds only because the verifier

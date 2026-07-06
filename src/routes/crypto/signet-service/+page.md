@@ -7,10 +7,10 @@ order: 8
 ## Why a separate trust domain
 
 Signet is not a Minister module running in another process for deployment
-convenience. It is a deliberate second trust boundary: Minister never holds the
-keys that link an anchor to a nullifier, so a Minister database leak - Postgres
-dump, backup, or a compromised app process - cannot by itself reconstruct the
-dedup namespace or forge a disclosed nullifier. Reconstructing either requires
+convenience. We built it as a deliberate second trust boundary: Minister never
+holds the keys that link an anchor to a nullifier, so a Minister database leak -
+Postgres dump, backup, or a compromised app process - cannot by itself reconstruct
+the dedup namespace or forge a disclosed nullifier. Reconstructing either requires
 Signet's own key material, which never leaves Signet and is sealed at rest under
 its own key-encryption key.
 
@@ -41,10 +41,13 @@ It does not - there are **three independent origins**, and conflating them is a
 common mistake reading this system:
 
 1. **`master_seed`** - 32 random bytes from the OS RNG, minted exactly once. It
-   feeds `HKDF-SHA-512` to derive `seed_null`, which becomes the VOPRF keypair
-   `(skS, pkS)` via RFC 9497's `DeriveKeyPair`. The same `master_seed` also derives
-   every per-RP disclose key, `k_disc(clientId)`. Both derivations are covered in
-   detail in [The Badge Nullifier](/crypto/badge-nullifier).
+   feeds `HKDF-SHA-512` - a standard way to stretch one root secret into several
+   independent-looking keys, keyed off different label strings so each derived key
+   is unrelated to the others even though they share a root - to derive `seed_null`,
+   which becomes the VOPRF keypair `(skS, pkS)` via RFC 9497's `DeriveKeyPair`. The
+   same `master_seed` also derives every per-RP disclose key, `k_disc(clientId)`.
+   Both derivations are covered in detail in
+   [The Badge Nullifier](/crypto/badge-nullifier).
 2. **The pairwise HMAC secret** is **imported**, not derived from the seed at all.
    It is the same `OIDC_PAIRWISE_SECRET` byte string Minister uses for its own
    in-process pairwise `sub`/`jti` HMAC, sealed into Signet so its `/prf/pairwise`
@@ -84,6 +87,10 @@ shared between them: leaking one does not expose the others.
   refuses rather than silently rotating.
 
 ## Sealing at rest
+
+This is authenticated encryption: it hides the plaintext, and if anyone tampers
+with the ciphertext, even by a single bit, decryption fails outright instead of
+quietly handing back the wrong bytes.
 
 **Cipher.** AES-256-GCM (`aes-gcm` crate `0.10`), not libsodium or XChaCha.
 
@@ -143,6 +150,11 @@ Signet's other surface, `/sign` and `/key*`, predates the crypto-core role and
 serves FreedInk's blind vote tokens. It shares Signet's mTLS boundary and KEK
 sealing but no key material with the PRF surface.
 
+Blind RSA signing lets Signet sign a token without ever seeing what it's signing:
+the client blinds the value first, Signet signs the blinded version, and the client
+unblinds it afterward to get a signature over the original value that looks no
+different from every other token Signet has ever signed.
+
 **Primitive.** RSAPBSSA-SHA384-PSS-Randomized - RFC 9474 RSA blind signatures plus
 the partially-blind public-metadata extension
 (`draft-amjad-cfrg-partially-blind-rsa`), via the `blind-rsa-signatures` crate
@@ -187,6 +199,10 @@ configured. An identity pinned as PRF-only is explicitly refused on `/sign` and
 > theoretical - but worth knowing before flipping it on.
 
 ## The mTLS PKI and identity pinning
+
+mTLS - mutual TLS - flips the usual browser trust direction: it's not just the
+client checking the server's certificate, the server also demands and verifies one
+from the client before it will talk at all.
 
 **Transport.** rustls `0.23` with the **ring** crypto provider, installed
 explicitly at startup. Client authentication is **mandatory**: the server builds

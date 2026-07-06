@@ -6,10 +6,12 @@ order: 5
 
 ## The construction
 
-The pairwise `sub` (and the disclosure `jti`, and the two share-link
-pseudonyms) are all one primitive applied to four different tagged inputs:
-`HMAC-SHA-256(key, input)`, 32 raw bytes, `base64url`-encoded (RFC 4648 §5, no
-padding) to a 43-character string.
+HMAC-SHA-256 is a keyed fingerprint: the same input plus the same secret key
+always produces the same short output, and without the key you cannot run it
+backwards or forge one. The pairwise `sub` (and the disclosure `jti`, and the
+two share-link pseudonyms) are all one primitive applied to four different
+tagged inputs: `HMAC-SHA-256(key, input)`, 32 raw bytes, `base64url`-encoded
+(RFC 4648 §5, no padding) to a 43-character string.
 
 The key is `OIDC_PAIRWISE_SECRET`: an environment-required string of at least
 32 characters, read directly at call time with no fallback.
@@ -62,10 +64,10 @@ must stay byte-for-byte stable, because a persisted pairwise `sub` cannot be
 recomputed differently later without breaking every relying party that keyed
 an account on it.
 
-> **The untagged-encoding caveat.** Domain separation between these families
-> comes from the `jti:` / `sharelink:` string prefixes alone, not from a
-> length prefix. `` `${userId}:${clientId}` `` is safe only because a
-> `userId` is a cuid and a `clientId` is always `` `mc_[A-Za-z0-9_-]+` ``
+> **The untagged-encoding caveat.** Here's the trap: domain separation between
+> these families comes from the `jti:` / `sharelink:` string prefixes alone,
+> not from a length prefix. `` `${userId}:${clientId}` `` is safe only because
+> a `userId` is a cuid and a `clientId` is always `` `mc_[A-Za-z0-9_-]+` ``
 > (enforced by a charset guard at client creation, with one legacy exact-match
 > exception for the seeded demo client) - neither can contain a colon, so the
 > two fields can't be shuffled across the separator the way `("ab","c")` and
@@ -83,8 +85,8 @@ the two HMAC spaces never share a key - but one secret leak still breaks both.
 
 ## The MINISTER_SUB_BACKEND seam
 
-Pairwise derivation can run in Minister's own process, or against Signet - a
-separate crypto-core service - through a generic keyed-HMAC oracle at
+We can run pairwise derivation in Minister's own process, or against Signet -
+a separate crypto-core service - through a generic keyed-HMAC oracle at
 `/prf/pairwise`. Which one runs is one env var, read per call rather than
 cached at module load - switching backends is a config change, not a code
 change:

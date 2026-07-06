@@ -17,7 +17,10 @@ disclosure minimization.
 ## PKCE: binding the code to the client that requested it
 
 Minister requires PKCE S256 on every authorize request - no `plain`, no
-skipping it. The construction (RFC 7636):
+skipping it. PKCE (Proof Key for Code Exchange) stops a stolen authorization
+code from being redeemed by anyone except whoever actually started the flow:
+the RP commits to a hashed secret up front, then has to produce the original
+at token exchange to prove it's the same party. The construction (RFC 7636):
 
 ```text
 code_challenge = base64url(SHA-256(code_verifier))
@@ -54,8 +57,9 @@ PKCE check gets wrong:
 
 ## Tokens: two different signed artifacts, two different lifetimes
 
-Both tokens are EdDSA (Ed25519) compact JWS, signed with `#key-3`, the
-in-process token key - never KMS. See
+Both tokens are EdDSA (Ed25519) compact JWS - a signature anyone holding
+Minister's public key can check offline, without calling back to Minister -
+signed with `#key-3`, the in-process token key, never KMS. See
 [Signatures, Keys, and the DID](/crypto/signatures-and-signing-keys) for why
 token signing can't use the KMS-backed badge key: an `id_token` carrying a
 few disclosed badge VCs can exceed KMS's 4096-byte RAW-sign cap.
@@ -131,8 +135,9 @@ prefix and charset (`^mc_[A-Za-z0-9_-]+$`) matter beyond naming: they're also
 the guard that keeps the pairwise-`sub` input encoding collision-free (see
 [Pairwise Subjects](/crypto/pairwise-subjects)). `client_secret` is 32 random
 bytes, base64url. The secret is never stored in plaintext - it's hashed at
-rest with Argon2id, the same OWASP-baseline parameters used for recovery
-codes (memoryCost 19 MiB, timeCost 2, parallelism 1; see
+rest with Argon2id (a memory-hard hash, deliberately slow and memory-expensive
+so brute-forcing a stolen value offline is costly), the same OWASP-baseline
+parameters used for recovery codes (memoryCost 19 MiB, timeCost 2, parallelism 1; see
 [Hashing, HMAC, and Key Derivation](/crypto/hashing-hmac-and-kdfs)):
 
 ```ts

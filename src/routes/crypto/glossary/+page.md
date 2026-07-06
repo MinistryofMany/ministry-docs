@@ -6,7 +6,7 @@ order: 2
 
 ## Notation
 
-These conventions are used consistently across every page in this track.
+We use these conventions consistently across every page in this track.
 
 - `base64url(x)` - RFC 4648 section 5 base64url encoding, no padding, unless a
   page states otherwise.
@@ -120,12 +120,12 @@ there's no unauthenticated fallback.
 scope, a time epoch) that's unique per `(secret, context)` pair, disclosed
 alongside a proof so a verifier can detect reuse - "this same secret already
 did this same thing" - without the nullifier revealing which secret produced
-it. This ecosystem uses the word for two different constructions: a
-Semaphore/RLN circuit nullifier (a zk-SNARK output, prevents double-posting or
-tracks rate-limit violations) and Minister's badge Sybil-dedup nullifier (a
-VOPRF/HMAC construction, prevents one person registering two badges off the
-same real-world anchor). They are not interchangeable and use different math
-- see [The Badge Nullifier](/crypto/badge-nullifier) versus
+it. We use the word for two different constructions in this ecosystem, and
+they should not be confused: a Semaphore/RLN circuit nullifier (a zk-SNARK
+output, prevents double-posting or tracks rate-limit violations) and
+Minister's badge Sybil-dedup nullifier (a VOPRF/HMAC construction, prevents
+one person registering two badges off the same real-world anchor). Same name,
+different math - see [The Badge Nullifier](/crypto/badge-nullifier) versus
 [Zero-Knowledge in the Relying Parties](/crypto/relying-party-zero-knowledge).
 
 **OPRF / VOPRF.** Oblivious Pseudorandom Function: a protocol where a client
@@ -138,9 +138,9 @@ SHA-512 for the badge nullifier's stage-1 dedup step.
 
 **Pairwise subject / pseudonym.** An identifier that's different for every
 relying party a user logs into, so no two RPs can compare notes and discover
-they're talking to the same person. Minister computes it as
+they're talking to the same person. We compute it as
 `base64url(HMAC-SHA-256(OIDC_PAIRWISE_SECRET, userId || ":" || clientId))`,
-then uses the result as the OIDC `sub` claim. See
+then use the result as the OIDC `sub` claim. See
 [Pairwise Subjects](/crypto/pairwise-subjects).
 
 **PKCE.** Proof Key for Code Exchange (RFC 7636), an OIDC/OAuth extension that

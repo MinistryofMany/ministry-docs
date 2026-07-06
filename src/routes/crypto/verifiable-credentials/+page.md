@@ -6,7 +6,10 @@ order: 6
 
 ## The VC as a signed JWT
 
-A Minister badge is a W3C Verifiable Credential (VC Data Model 2.0), but the
+In plain terms, a badge is a signed claim: something like "this account
+controls this email domain," wrapped so that anyone can check who issued it
+and that nobody tampered with it, without calling Minister back to ask. A
+Minister badge is a W3C Verifiable Credential (VC Data Model 2.0), but the
 wire format is a JWT-VC: the `vc` envelope sits inside an ordinary JWT
 payload, and the whole thing is a compact JWS. The protected header is
 `{alg: "EdDSA", kid: "<issuer-did>#key-2", typ: "vc+jwt"}` - `EdDSA` per RFC
@@ -139,7 +142,13 @@ timestamps around it are disclosure-scoped.
 
 A disclosed badge is only useful to a relying party if the RP can prove it
 belongs to the person who just logged in, without Minister handing over any
-shared identifier. The rule both Minister and the RP-side SDK enforce is:
+shared identifier. Think of it like a wristband stamped at the door of a
+show: it is tied to the person standing there when it was issued, not
+something you can hand to someone else and have it still work. A disclosed
+badge is stamped to the login that requested it, so it does not verify
+against a different session, even a legitimate one, because the subject
+baked into the badge will not match. The rule both Minister and the RP-side
+SDK enforce is:
 
 > a disclosed badge's subject must equal `did:web:<host>:u:<id_token sub>`.
 
@@ -158,11 +167,11 @@ export function buildPairwiseSubjectDid(issuer: string, sub: string): string {
 `verifyMinisterBadges` computes this expected subject from the already-verified
 id_token, then pushes any badge whose subject doesn't match into a `rejected`
 list rather than trusting it - a borrowed credential, a stale re-mint, or a
-badge minted for a different RP fails closed and simply doesn't count. Because
-`didFromIssuer` derives the DID from the issuer host with no override, a
-deployment's `MINISTER_ISSUER` host must equal Minister's own issuer domain,
-or every badge lands in `rejected` while login itself still succeeds - the
-same coupling trap noted in
+badge minted for a different RP fails closed and simply doesn't count. Here's
+the trap: because `didFromIssuer` derives the DID from the issuer host with
+no override, a deployment's `MINISTER_ISSUER` host must equal Minister's own
+issuer domain, or every badge lands in `rejected` while login itself still
+succeeds - the same coupling trap noted in
 [Trust and Security Model](/understand/trust-and-security-model).
 
 > Don't confuse this with the standalone `verifyMinisterBadge`, which only

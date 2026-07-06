@@ -13,7 +13,10 @@ signatures, HMACs, and a blinded PRF.
 
 FreedInk and Discreetly each run a second, independent zero-knowledge stack on
 top of a Minister login, to prove group membership without revealing which
-member you are. FreedInk uses Semaphore directly for blog membership.
+member you are. Think of a guest list at the door: the proof lets you show
+you're on it without pointing at your name, and the person checking can
+confirm the proof is genuine without ever learning who you are. FreedInk uses
+Semaphore directly for blog membership.
 Discreetly uses RLN (Rate-Limiting Nullifier), a Semaphore variant, for room
 messaging. Neither app hand-rolls this math: both consume a shared package
 family, `@ministryofmany/membership` and `@ministryofmany/rln`, published from
@@ -28,8 +31,9 @@ instead, and `@discreetly/policy` is now a one-line re-export of
 what's actually running.
 
 In both cases the shape is the same: proving happens in the browser, the
-server only verifies, and a nullifier stops the same secret from being reused
-in a way that should be caught.
+server only verifies, and a nullifier - a tag derived from your secret that
+flags reuse without revealing the secret itself - stops the same secret from
+being reused in a way that should be caught.
 
 ## FreedInk - Semaphore membership proofs
 
@@ -234,7 +238,10 @@ then publish.
 ## The client-side identity vaults
 
 Both apps keep the ZK identity secret out of server custody entirely, using
-the same shape of construction with different parameters.
+the same shape of construction with different parameters. Both start from a
+password and stretch it through PBKDF2 - a deliberately slow, repeated-hash
+key derivation, so brute-forcing a stolen ciphertext costs real computation -
+to produce the key that locks the secret at rest.
 
 | | FreedInk | Discreetly |
 |---|---|---|
